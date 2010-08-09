@@ -242,11 +242,11 @@ public class IQEApi implements Serializable {
 			//  Covert array of Hex bytes to a String
 			result = new String(signature_hex, "ISO-8859-1");
 		} catch (NoSuchAlgorithmException e) {
-			e.printStackTrace();
+			return "";
 		} catch (InvalidKeyException e) {
-			e.printStackTrace();
+			return "";
 		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
+			return "";
 		}
 		return result;
 	}
@@ -291,9 +291,9 @@ public class IQEApi implements Serializable {
 	        }
 	        
 		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
+			result = "Exception : UnsupportedEncodingException";
 		} catch (IOException e) {
-			e.printStackTrace();
+			result = "Exception : IOException";
 		}
 		return result;
 	}
