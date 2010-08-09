@@ -217,12 +217,8 @@ public class IQEApi implements Serializable {
 			String value = fields.get(key);
 			if (key.equals("img")) {
 				// if the argument is an image, only keep the name of the file
-				String file_name = value;
-				if (value.contains(System.getProperty("file.separator"))) {
-					file_name = value.substring(value.lastIndexOf('/'));
-				}
-				file_name = file_name.substring(file_name.lastIndexOf(System.getProperty("file.separator"))+1);
-				raw_string += "img" + file_name;
+				File image = new File(value);
+				raw_string += "img" + image.getName();
 			} else {
 				raw_string += key + value;
 			}
