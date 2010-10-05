@@ -61,7 +61,7 @@ public class IQEApi implements Serializable {
 	 * 
 	 * @param image
 	 *            A non-<code>null</code> {@link File} : The image file you
-	 *            would like to get labels for. The image’s height and width
+	 *            would like to get labels for. The image's height and width
 	 *            should be less than 640 pixels.
 	 * @return A non-<code>null</code> {@link IQEQuery}
 	 */
@@ -74,7 +74,7 @@ public class IQEApi implements Serializable {
 	 * 
 	 * @param image
 	 *            A non-<code>null</code> {@link File} : The image file you
-	 *            would like to get labels for. The image’s height and width
+	 *            would like to get labels for. The image's height and width
 	 *            should be less than 640 pixels.
 	 * @param webhook
 	 *            A possibly-<code>null</code> {@link String} : The URL where
