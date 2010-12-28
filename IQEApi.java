@@ -7,6 +7,7 @@ import java.io.UnsupportedEncodingException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Iterator;
 import java.util.TimeZone;
@@ -28,7 +29,7 @@ import org.apache.http.util.EntityUtils;
 
 /**
  * IQEngines Java API
- * 
+ *
  * @author Vincent Garrigues
  *
  */
@@ -77,7 +78,7 @@ public class IQEApi implements Serializable {
      *            A possibly-<code>null</code> {@link String} : The URL where
      *            the results are sent via HTTP POST once the labels have been
      *            computed.
-     * @param extra 
+     * @param extra
      *            A possibly-<code>null</code> {@link String} : A string that
      *            is posted back when the webhook is called. It is useful for
      *            passing JSON-encoded extra parameters about the query that
@@ -137,7 +138,7 @@ public class IQEApi implements Serializable {
         if (image.exists()) {
             return new IQEQuery(post(IQESelector.query, fields), fields.get("api_sig"));
         } else {
-            return new IQEQuery("Error : File doesn't exists", fields.get("api_sig"));
+            return new IQEQuery("Error : File '" + image.getPath() + "' doesn't exists", fields.get("api_sig"));
         }
     }
 
@@ -167,7 +168,7 @@ public class IQEApi implements Serializable {
      * @param json
      *            If this parameter is true, the results are in the JSON format,
      *            otherwise the results are in the XML format.
-     * 
+     *
      * @return A non-<code>null</code> {@link String}
      */
     public String update(String device_id, boolean json) {
@@ -187,6 +188,93 @@ public class IQEApi implements Serializable {
         fields.put("api_sig", buildSignature(fields));
 
         return post(IQESelector.update, fields);
+    }
+
+    /**
+     * The Upload API allows you to upload images to the IQ Engines object 
+     * search database through a RESTful interface. Once the computer vision
+     * system has successfully indexed your image, you will be able to search
+     * for it using the query api.
+     * 
+     * @param images
+     *          A non-<code>null</code> {@link ArrayList} of {@link File} : A 
+     *          set of image files you would like to associate to this object.
+     * @param name
+     *          A non-<code>null</code> {@link String} : The human-readable name 
+     *          of the object. This is what we return when you use the query
+     *          api.
+     *
+     * @return A non-<code>null</code> {@link String}
+     */
+    public String upload(ArrayList<File> images, String name) {
+        return upload(images, name, null, null, false, null);
+    }
+
+    /**
+     * The Upload API allows you to upload images to the IQ Engines object
+     * search database through a RESTful interface. Once the computer vision
+     * system has successfully indexed your image, you will be able to search
+     * for it using the query api.
+     *
+     * @param images
+     *          A non-<code>null</code> {@link ArrayList} of {@link File} : A 
+     *          set of image files you would like to associate to this object.
+     * @param name
+     *          A non-<code>null</code> {@link String} : The human-readable name 
+     *          of the object. This is what we return when you use the query
+     *          api.
+     * @param custom_id
+     *          A possibly-<code>null</code> {@link String} : A unique id within
+     *          the collection you are uploading. This custom_id can be used to
+     *          reference this object’s meta data at a later point in time.
+     * @param meta
+     *          A possibly-<code>null</code> {@link String} : This is a
+     *          json-dictionary encoded as a string of additional meta-data to
+     *          be linked to the uploaded image.
+     *          (e.g. {‘isbn’: ‘9780393326291’})
+     * @param json
+     *          If this parameter is true, the results are in the JSON format,
+     *          otherwise the results are in the XML format.
+     * @param collection
+     *          A possibly-<code>null</code> {@link String} : This field is a
+     *          string that ties multiple objects together into a ‘collection’.
+     *          You can use this field to more easily look up objects belonging
+     *          to certain groups later.
+     *
+     * @return A non-<code>null</code> {@link String}
+     */
+    public String upload(ArrayList<File> images, String name, String custom_id, String meta, boolean json, String collection) {
+        TreeMap<String, String> fields = new TreeMap<String, String>();
+
+        // Optional parameters
+        if (custom_id != null) {
+            fields.put("custom_id", custom_id);
+        }
+        if (meta != null) {
+            fields.put("meta", meta);
+        }
+        if (collection != null) {
+            fields.put("collection", collection);
+        }
+        if (json) {
+            fields.put("json", "1");
+        }
+
+        // Required parameters
+        int index = 0;
+        for (File image : images) {
+            if (!image.exists()) {
+                return "Error : File '" + image.getPath() + "' doesn't exists";
+            }
+            fields.put("images" + ++index, image.getPath());
+        }
+        fields.put("name", name);
+        fields.put("time_stamp", now());
+        fields.put("api_key", key);
+        fields.put("api_sig", buildSignature(fields));
+
+
+        return post(IQESelector.object, fields);
     }
 
     /**
@@ -250,15 +338,18 @@ public class IQEApi implements Serializable {
         String raw_string = "";
         Iterator<String> i = fields.keySet().iterator();
         while (i.hasNext()) {
-            String key = i.next();
-            System.out.println("key = " + key);
-            String value = fields.get(key);
-            if (key.equals("img")) {
+            String tmpKey = i.next();
+            String value = fields.get(tmpKey);
+            if (tmpKey.equals("img")) {
                 // if the argument is an image, only keep the name of the file
                 File image = new File(value);
                 raw_string += "img" + image.getName();
+            } else if (tmpKey.startsWith("images")) {
+                // if the argument is an image, only keep the name of the file
+                File image = new File(value);
+                raw_string += "images" + image.getName();
             } else {
-                raw_string += key + value;
+                raw_string += tmpKey + value;
             }
         }
         try {
@@ -306,12 +397,15 @@ public class IQEApi implements Serializable {
         try {
             Iterator<String> i = fields.keySet().iterator();
             while (i.hasNext()) {
-                String key = i.next();
-                if (key.equals("img")) {
-                    File img = new File(fields.get(key));
-                    entity.addPart(key, new FileBody(img));
+                String tmpKey = i.next();
+                if (tmpKey.equals("img")) {
+                    File img = new File(fields.get(tmpKey));
+                    entity.addPart(tmpKey, new FileBody(img));
+                } else if (tmpKey.startsWith("images")) {
+                    File img = new File(fields.get(tmpKey));
+                    entity.addPart("images", new FileBody(img));
                 } else {
-                    entity.addPart(key, new StringBody(fields.get(key)));
+                    entity.addPart(tmpKey, new StringBody(fields.get(tmpKey)));
                 }
             }
             httppost.setEntity(entity);
@@ -386,7 +480,8 @@ public class IQEApi implements Serializable {
 
         query,
         update,
-        result
+        result,
+        object
     }
     /** Your API key */
     private final String key;
